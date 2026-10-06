@@ -176,12 +176,15 @@ describe('connectSmartCubeDevice (previously permitted device)', () => {
       });
 
       const statuses: string[] = [];
+      const onDevice = vi.fn();
       const connection = await connectSmartCubeDevice(device, {
         enableAddressSearch: false,
         onStatus: status => statuses.push(status),
+        onDevice,
       });
 
       expect(requestDevice).not.toHaveBeenCalled();
+      expect(onDevice).toHaveBeenCalledWith(device);
       expect(connect).toHaveBeenCalledWith(device, undefined, expect.objectContaining({
         enableAddressSearch: false,
         serviceUuids: expect.any(Set),

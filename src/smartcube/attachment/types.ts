@@ -26,6 +26,8 @@ export interface ConnectSmartCubeOptions {
     signal?: AbortSignal;
     /** Called with short status messages during resolution (e.g. MAC search). */
     onStatus?: (message: string) => void;
+    /** Receives the exact browser device selected or reattached, before GATT resolution begins. */
+    onDevice?: (device: BluetoothDevice) => void;
     /**
      * When true, if advertisement and name hints fail for QiYi / MoYu32, try a bounded set of MAC candidates
      * derived from the device name (slow; default false).

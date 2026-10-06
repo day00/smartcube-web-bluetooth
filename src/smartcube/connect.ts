@@ -175,6 +175,8 @@ async function connectSelectedSmartCubeDevice(
     protocols: ReturnType<typeof getRegisteredProtocols>
 ): Promise<SmartCubeConnection> {
 
+    opts.onDevice?.(device);
+
     opts.onStatus?.('Reading advertisements…');
     const advertisementManufacturerData = await waitForManufacturerData(
         device,
