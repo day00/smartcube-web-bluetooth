@@ -147,6 +147,34 @@ export async function connectSmartCube(
 
     const device = await navigator.bluetooth.requestDevice(requestOptions);
 
+    return connectSelectedSmartCubeDevice(device, opts, protocols);
+}
+
+/**
+ * Attach a BluetoothDevice that the origin was already permitted to use (for example, one returned by
+ * `navigator.bluetooth.getDevices()`). This intentionally shares the exact advertisement, GATT profile,
+ * protocol-selection and MAC-verification path used by the chooser entry.
+ */
+export async function connectSmartCubeDevice(
+    device: BluetoothDevice,
+    arg?: MacAddressProvider | ConnectSmartCubeOptions
+): Promise<SmartCubeConnection> {
+    const opts = normalizeOptions(arg);
+    const protocols = getRegisteredProtocols();
+
+    if (protocols.length === 0) {
+        throw new Error('No smartcube protocols registered');
+    }
+
+    return connectSelectedSmartCubeDevice(device, opts, protocols);
+}
+
+async function connectSelectedSmartCubeDevice(
+    device: BluetoothDevice,
+    opts: ConnectSmartCubeOptions,
+    protocols: ReturnType<typeof getRegisteredProtocols>
+): Promise<SmartCubeConnection> {
+
     opts.onStatus?.('Reading advertisements…');
     const advertisementManufacturerData = await waitForManufacturerData(
         device,

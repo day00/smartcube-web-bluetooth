@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Subject } from 'rxjs';
-import { connectSmartCube } from './connect';
+import { connectSmartCube, connectSmartCubeDevice } from './connect';
 import { registerProtocol, getRegisteredProtocols, type SmartCubeProtocol } from './protocol';
 import type { SmartCubeCapabilities, SmartCubeCommand, SmartCubeConnection, SmartCubeEvent } from './types';
 import { FIXTURES, loadFixture } from '../test/fixtures';
@@ -150,3 +150,47 @@ describe('connectSmartCube (error paths)', () => {
   });
 });
 
+describe('connectSmartCubeDevice (previously permitted device)', () => {
+  it('uses the provided device without reopening the browser chooser', async () => {
+    const prev = clearProtocolRegistry();
+    try {
+      const fixture = await loadFixture(FIXTURES.ganGen2_small);
+      const { device } = installMockBluetoothFromFixture(fixture, { deviceId: 'remembered-device' });
+      const requestDevice = vi.spyOn(navigator.bluetooth, 'requestDevice');
+      const events$ = new Subject<SmartCubeEvent>();
+      const connect = vi.fn(async (): Promise<SmartCubeConnection> => ({
+        deviceName: 'Remembered GoCube',
+        deviceMAC: '',
+        protocol: { id: 'remembered', name: 'Remembered' },
+        capabilities: { gyroscope: true, battery: true, facelets: true, hardware: true, reset: false },
+        events$,
+        sendCommand: async () => {},
+        disconnect: async () => { events$.complete(); },
+      }));
+      registerProtocol({
+        nameFilters: [{ namePrefix: 'GAN' }],
+        optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dc4179'],
+        matchesDevice: () => true,
+        gattAffinity: () => 999,
+        connect,
+      });
+
+      const statuses: string[] = [];
+      const connection = await connectSmartCubeDevice(device, {
+        enableAddressSearch: false,
+        onStatus: status => statuses.push(status),
+      });
+
+      expect(requestDevice).not.toHaveBeenCalled();
+      expect(connect).toHaveBeenCalledWith(device, undefined, expect.objectContaining({
+        enableAddressSearch: false,
+        serviceUuids: expect.any(Set),
+      }));
+      expect(connection.deviceName).toBe('Remembered GoCube');
+      expect(statuses).not.toContain('Select your cube…');
+      expect(statuses).toContain('Connecting…');
+    } finally {
+      restoreProtocolRegistry(prev);
+    }
+  });
+});
